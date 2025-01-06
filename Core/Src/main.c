@@ -266,7 +266,7 @@ void compute_distance(void)
 	distance = (float)echo_time * 0.17;
 	state = 0;
 }
-//测试一下git
+//测试一下git，看样子是端口号的问题，再测试一次
 /* USER CODE END 4 */
 
  /* MPU Configuration */
