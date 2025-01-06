@@ -266,7 +266,7 @@ void compute_distance(void)
 	distance = (float)echo_time * 0.17;
 	state = 0;
 }
-
+//≤‚ ‘“ªœ¬git
 /* USER CODE END 4 */
 
  /* MPU Configuration */
