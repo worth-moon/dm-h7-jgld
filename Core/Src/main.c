@@ -266,7 +266,7 @@ void compute_distance(void)
 	distance = (float)echo_time * 0.17;
 	state = 0;
 }
-//测试一下git，看样子是端口号的问题，再测试一次，看样子推论是错的，还需要后续慢慢测试，测试一下上传速度。再次测试端口7890.
+//测试一下git，看样子是端口号的问题，再测试一次，看样子推论是错的，还需要后续慢慢测试，测试一下上传速度。再次测试端口7890.地方
 /* USER CODE END 4 */
 
  /* MPU Configuration */
