@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "delay.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +47,7 @@
 /* USER CODE BEGIN PV */
 volatile float distance;
 uint8_t state;
-uint64_t error_count,success_count;
+uint64_t error_count, success_count, error_count2;
 
 /* USER CODE END PV */
 
@@ -100,7 +100,7 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  
+	delay_init(275);
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_15,1);
 	HAL_Delay(1000);
   /* USER CODE END 2 */
@@ -113,6 +113,7 @@ int main(void)
 	  //HAL_Delay(0);
 	  //HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 0);
 	  //HAL_Delay(0);
+	  // 
 	  switch (state)
 	  {
 		  case 0:
@@ -197,30 +198,23 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void start_signal(void)
 {
-	/*=============== start signal =============*/
 	HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 1);
-	HAL_TIM_Base_Start(&htim13);
-	//HAL_Delay(1);
-	while (TIM13->CNT < 20)//等待20us
-	{
-
-	}
+	delay_us(20);
 	HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 0);
-	HAL_TIM_Base_Stop(&htim13);
-	__HAL_TIM_SET_COUNTER(&htim13, 0);
 	state = 1;
 }
 
 void wait_echo(void)
 {
-	HAL_TIM_Base_Start(&htim13);
-	//HAL_Delay(1);
-	while ((TIM13->CNT < 2500) && (HAL_GPIO_ReadPin(Echo_GPIO_Port, Echo_Pin) == 0))//等待1ms，或是超声波响应
+	uint32_t delay_time = 5;
+	uint32_t start_time = HAL_GetTick();//ms级别的计时
+	uint32_t cur_time;
+	while (((cur_time = HAL_GetTick()) - start_time < delay_time) && (HAL_GPIO_ReadPin(Echo_GPIO_Port, Echo_Pin) == 0)) // 等待1ms，或是超声波响应
 	{
 
 	}
 
-	if (TIM13->CNT >= 2500)//如果是超时退出，则重新启动
+	if (cur_time - start_time >= delay_time)//如果是超时退出，则重新启动
 	{
 		error_count++;
 		state = 0;
@@ -230,23 +224,49 @@ void wait_echo(void)
 		state = 2;
 		success_count++;
 	}
-	HAL_TIM_Base_Stop(&htim13);
-	__HAL_TIM_SET_COUNTER(&htim13, 0);
 }
+
+
+// 全局变量定义
+uint32_t start_time_ms;
+int32_t start_time_us;
+uint32_t cur_time_ms;
+int32_t cur_time_us;
+float echo_time_ms, echo_time_us, echo_time;
 
 void compute_distance(void)
 {
-	HAL_TIM_Base_Start(&htim14);
-	//HAL_Delay(0);
-	while (HAL_GPIO_ReadPin(Echo_GPIO_Port, Echo_Pin))//暂时不做保护，因为当前bug主要集中在state=1的地方
+	start_time_ms = HAL_GetTick(); // ms级别的计时
+	start_time_us = SysTick->VAL;
+	while (HAL_GPIO_ReadPin(Echo_GPIO_Port, Echo_Pin)) // 暂时不做保护，因为当前bug主要集中在state=1的地方
 	{
 
 	};
-	HAL_TIM_Base_Stop(&htim14);
-	distance = __HAL_TIM_GET_COUNTER(&htim14) * 0.000001f * 340.0f / 2.0f;
-	__HAL_TIM_SET_COUNTER(&htim14, 0);
+	cur_time_ms = HAL_GetTick();
+	cur_time_us = SysTick->VAL;
+	//echo_time = cur_time_ms - start_time_ms;
+	echo_time_ms = cur_time_ms - start_time_ms; // 单位是ms,us也许需要单独处理
+	echo_time_us = -(cur_time_us - start_time_us) * 0.001f * 0.00363f;//也是ms单位,因为是向下的计数器，所以应该取反
+	//echo_time = (cur_time_us - start_time_us) * 0.001f * 0.00363f; // 单位是ms
+	/*
+	*	1. 如果ms之差不超过1，即距离小于0.17m，则cur_us必然大于start_us,此时乘以0.00363，转化为us单位，×0.001，转为ms单位
+	*		实际推测发现，也不尽是，cur_us = 11601 start_us = 163258,一旦二者相减，出现一个负数，则超出了uint32_t能表达的范围，造成溢出
+	*   2. 可以确定，ms级别的计时没有问题，但是分度值在0.17m，太粗了。需要把us级别的计时独立出来，而后必然要封装一个计时函数
+	*/
+	//if (echo_time_ms == 0.0f && echo_time_us < 0)
+	//{
+	//	echo_time_us += 1.0f;
+	//}
+	echo_time = echo_time_ms + echo_time_us; // 单位是ms
+	//if (echo_time > 1000.0f)
+	//{
+	//	error_count2++;	
+	//}
+	// distance = (float)echo_time * 0.001f * 340.0f / 2.0f; // 单位是m
+	distance = (float)echo_time * 0.17;
 	state = 0;
 }
+
 /* USER CODE END 4 */
 
  /* MPU Configuration */

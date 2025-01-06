@@ -25,6 +25,7 @@
 "h7_new\stm32h7xx_hal_tim.o"
 "h7_new\stm32h7xx_hal_tim_ex.o"
 "h7_new\system_stm32h7xx.o"
+"h7_new\delay.o"
 --strict --scatter "h7_new\h7_new.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
